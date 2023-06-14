@@ -71,10 +71,15 @@ namespace transport_catalog {
                 length_of_distance = detail::GetLengthOfDistance(tc, bus->stops);
             }
 
-            detail::OutBusToScreen(bus_name, bus, amount_of_unique_stops, length_of_distance, geo_length_of_distance);
+            detail::OutBus(std::cout, bus_name, bus, amount_of_unique_stops, length_of_distance, geo_length_of_distance);
 
             if (print_to_file) {
-                detail::OutBusToFile(bus_name, bus, amount_of_unique_stops, length_of_distance, geo_length_of_distance);
+                std::ofstream fout;
+                fout.open("my_result.txt", std::ios::app);
+
+                detail::OutBus(fout, bus_name, bus, amount_of_unique_stops, length_of_distance, geo_length_of_distance);
+
+                fout.close();
             }
 
 
@@ -85,24 +90,29 @@ namespace transport_catalog {
             bool stop_is_exist = std::get<0>(tup_buses);
             std::set<std::string_view>* s_buses = std::get<1>(tup_buses);
 
-            detail::OutStopToScreen(stop_name, stop_is_exist, s_buses);
+            detail::OutStop(std::cout, stop_name, stop_is_exist, s_buses);
 
             if (print_to_file) {
-                detail::OutStopToFile(stop_name, stop_is_exist, s_buses);
+                std::ofstream fout;
+                fout.open("my_result.txt", std::ios::app);
+
+                detail::OutStop(fout, stop_name, stop_is_exist, s_buses);
+
+                fout.close();
             }
 
         }
 
         namespace detail {
 
-            void OutBusToScreen(const std::string_view bus_name, const TransportCatalogue::Bus* bus, const size_t amount_of_unique_stops, const size_t length_of_distance, const double geo_length) {
+            void OutBus(std::ostream& output, const std::string_view bus_name, const TransportCatalogue::Bus* bus, const size_t amount_of_unique_stops, const size_t length_of_distance, const double geo_length) {
 
                 if (bus == nullptr) {
-                    std::cout << "Bus " << bus_name << ": not found" << std::endl;
+                    output << "Bus " << bus_name << ": not found" << std::endl;
                     return;
                 }
 
-                std::cout << "Bus " << bus->name << ": "
+                output << "Bus " << bus->name << ": "
                     << bus->stops.size()
                     << " stops on route, "
                     << amount_of_unique_stops
@@ -115,83 +125,26 @@ namespace transport_catalog {
 
             }
 
-            void OutBusToFile(const std::string_view bus_name, const TransportCatalogue::Bus* bus, const size_t amount_of_unique_stops, const size_t length_of_distance, const double geo_length) {
+            void OutStop(std::ostream& output, const std::string_view stop_name, const bool stop_is_exist, const std::set<std::string_view>* s_buses) {
 
-                std::ofstream fout;
-                fout.open("my_result.txt", std::ios::app);
-
-                if (bus == nullptr) {
-                    fout << "Bus " << bus_name << ": not found" << std::endl;
-                    fout.close();
-
-                    return;
-                }
-
-                // выводим в файл
-                fout << "Bus " << bus->name << ": "
-                    << bus->stops.size()
-                    << " stops on route, "
-                    << amount_of_unique_stops
-                    << " unique stops, "
-                    << length_of_distance
-                    << " route length, "
-                    << (static_cast<double>(length_of_distance) / geo_length)
-                    << " curvature"
-                    << std::endl;
-                fout.close();
-
-            }
-
-            void OutStopToScreen(const std::string_view stop_name, const bool stop_is_exist, const std::set<std::string_view>* s_buses) {
-
-                std::cout << "Stop " << stop_name << ": ";
+                output << "Stop " << stop_name << ": ";
 
                 if (stop_is_exist == false) {
-                    std::cout << "not found" << std::endl;
+                    output << "not found" << std::endl;
                     return;
                 }
                 else if (s_buses->size() == 0) {
-                    std::cout << "no buses" << std::endl;
+                    output << "no buses" << std::endl;
                     return;
                 }
 
-                std::cout << "buses ";
+                output << "buses ";
 
                 for (const std::string_view& bus : *s_buses) {
-                    std::cout << bus << " ";
+                    output << bus << " ";
                 }
 
-                std::cout << std::endl;
-
-            }
-
-            void OutStopToFile(const std::string_view stop_name, const bool stop_is_exist, const std::set<std::string_view>* s_buses) {
-
-                std::ofstream fout;
-                fout.open("my_result.txt", std::ios::app);
-                fout << "Stop " << stop_name << ": ";
-
-                if (stop_is_exist == false) {
-                    fout << "not found" << std::endl;
-                    fout.close();
-
-                    return;
-                }
-                else if (s_buses->size() == 0) {
-                    fout << "no buses" << std::endl;
-                    fout.close();
-
-                    return;
-                }
-
-                fout << "buses ";
-
-                for (const std::string_view& bus : *s_buses) {
-                    fout << bus << " ";
-                }
-
-                fout << std::endl;
-                fout.close();
+                output << std::endl;
 
             }
 

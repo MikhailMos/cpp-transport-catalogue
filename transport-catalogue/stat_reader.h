@@ -31,11 +31,10 @@ namespace transport_catalog {
 			size_t GetLengthOfDistance(TransportCatalogue& tc, const std::vector<TransportCatalogue::Stop*>& v_stops);
 
 			// вывод информации
-			void OutBusToScreen(const std::string_view bus_name, const TransportCatalogue::Bus* bus, const size_t amount_of_unique_stops, const size_t length_of_distance, const double geo_length);
-			void OutBusToFile(const std::string_view bus_name, const TransportCatalogue::Bus* bus, const size_t amount_of_unique_stops, const size_t length_of_distance, const double geo_length);
+			void OutBus(std::ostream& output, const std::string_view bus_name, const TransportCatalogue::Bus* bus, const size_t amount_of_unique_stops, const size_t length_of_distance, const double geo_length);
 
-			void OutStopToScreen(const std::string_view stop_name, const bool stop_is_exist, const std::set<std::string_view>* s_buses);
-			void OutStopToFile(const std::string_view stop_name, const bool stop_is_exist, const std::set<std::string_view>* s_buses);
+			void OutStop(std::ostream& output, const std::string_view stop_name, const bool stop_is_exist, const std::set<std::string_view>* s_buses);
+			
 
 		} //detail
 

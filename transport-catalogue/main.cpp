@@ -2,40 +2,37 @@
 #include <sstream>
 #include <fstream>
 
-#include "input_reader.h"
 #include "transport_catalogue.h"
+#include "request_handler.h"
+#include "json_reader.h"
+#include "map_renderer.h"
+
 
 int main() {
     
-    std::stringstream s_in;
-    s_in << "13\n\
-        Stop Tolstopaltsevo : 55.611087, 37.20829, 3900m to Marushkino\n\
-        Stop Marushkino : 55.595884, 37.209755, 9900m to Rasskazovka, 100m to Marushkino\n\
-        Bus 256 : Biryulyovo Zapadnoye > Biryusinka > Universam > Biryulyovo Tovarnaya > Biryulyovo Passazhirskaya > Biryulyovo Zapadnoye\n\
-        Bus 750: Tolstopaltsevo - Marushkino - Marushkino - Rasskazovka\n\
-        Stop Rasskazovka : 55.632761, 37.333324, 9500m to Marushkino\n\
-        Stop Biryulyovo Zapadnoye : 55.574371, 37.6517, 7500m to Rossoshanskaya ulitsa, 1800m to Biryusinka, 2400m to Universam\n\
-        Stop Biryusinka : 55.581065, 37.64839, 750m to Universam\n\
-        Stop Universam : 55.587655, 37.645687, 5600m to Rossoshanskaya ulitsa, 900m to Biryulyovo Tovarnaya\n\
-        Stop Biryulyovo Tovarnaya : 55.592028, 37.653656, 1300m to Biryulyovo Passazhirskaya\n\
-        Stop Biryulyovo Passazhirskaya : 55.580999, 37.659164, 1200m to Biryulyovo Zapadnoye\n\
-        Bus 828 : Biryulyovo Zapadnoye > Universam > Rossoshanskaya ulitsa > Biryulyovo Zapadnoye\n\
-        Stop Rossoshanskaya ulitsa : 55.595579, 37.605757\n\
-        Stop Prazhskaya : 55.611678, 37.603831\n\
-        6\n\
-        Bus 256\n\
-        Bus 750\n\
-        Bus 751\n\
-        Stop Samara\n\
-        Stop Prazhskaya\n\
-        Stop Biryulyovo Zapadnoye";
+    using namespace transport_catalog;
 
-    //std::ifstream s_in("tsC_case1_input.txt");
+    TransportCatalogue tc;
+    renderer::MapRenderer map_renderer;
+    RequestHandler rh{ tc, map_renderer };
     
-    transport_catalog::TransportCatalogue my_tc;
-    //input_reader::ReadFromInput(std::cin, my_tc);
-    transport_catalog::input::ReadFromInput(s_in, my_tc);
-    
+    json::Document doc = ReadFromInput(std::cin, tc, map_renderer, rh);    
+    json::Print(doc, std::cout);
+
+    // чтение из файла и вывод в файл
+    //std::ifstream s_in("s10_final_opentest_3.json");
+    //json::Document doc = ReadFromInput(s_in, tc, map_renderer, rh);
+
+    //// просто отрисуем карту
+    ////svg::Document my_map = rh.RenderMap();
+    //////my_map.Render(std::cout);
+
+    //std::ofstream fout;
+    //fout.open("my_result.txt", std::ios::app);
+    ////my_map.Render(fout);
+    //json::Print(doc, fout);
+    //
+    //fout.close();
     
     return 0;
 }

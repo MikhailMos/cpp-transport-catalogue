@@ -5,10 +5,10 @@
 
 namespace transport_catalog {
 
-    TransportCatalogue::Stop* TransportCatalogue::AddStop(const std::string& name, const double latitude, const double longitude) {
+    Stop* TransportCatalogue::AddStop(const std::string& name, const double latitude, const double longitude) {
 
-        detail::Coordinates coord{ latitude, longitude };
-        TransportCatalogue::Stop stop{ name, std::move(coord) };
+        geo::Coordinates coord{ latitude, longitude };
+        Stop stop{ name, std::move(coord) };
         auto& el = d_stops_.emplace_back(std::move(stop));
         um_stopname_to_stop_.emplace(el.name, &el);
         // добавляем. если только такой остановки нет
@@ -20,7 +20,7 @@ namespace transport_catalog {
 
     }
 
-    TransportCatalogue::Stop* TransportCatalogue::FindStop(const std::string& name) const {
+    Stop* TransportCatalogue::FindStop(const std::string& name) const {
         const auto it = um_stopname_to_stop_.find(name);
         if (it == um_stopname_to_stop_.cend()) {
             return {};
@@ -29,7 +29,7 @@ namespace transport_catalog {
         return it->second;
     }
 
-    TransportCatalogue::Bus* TransportCatalogue::AddBus(const std::string& name, const std::vector<std::string>& v_stops) {
+    Bus* TransportCatalogue::AddBus(const std::string& name, const std::vector<std::string>& v_stops, const bool is_roundtrip) {
 
         std::vector<Stop*> v_ptr_stops;
 
@@ -38,7 +38,7 @@ namespace transport_catalog {
             v_ptr_stops.push_back(curr_stop);
         }
 
-        TransportCatalogue::Bus bus{ name, std::move(v_ptr_stops) };
+        Bus bus{ name, std::move(v_ptr_stops), is_roundtrip };
         auto& el = d_buses_.emplace_back(std::move(bus));
         um_busname_to_bus_.emplace(el.name, &el);
 
@@ -51,7 +51,7 @@ namespace transport_catalog {
 
     }
 
-    TransportCatalogue::Bus* TransportCatalogue::FindBus(const std::string& name) const {
+    Bus* TransportCatalogue::FindBus(const std::string_view& name) const {
         const auto it = um_busname_to_bus_.find(name);
         if (it == um_busname_to_bus_.cend()) {
             return {};
@@ -60,13 +60,13 @@ namespace transport_catalog {
         return it->second;
     }
 
-    TransportCatalogue::Bus* TransportCatalogue::GetBusInfo(const std::string& bus_name) const {
+    Bus* TransportCatalogue::GetBusInfo(const std::string_view& bus_name) const {
 
         return FindBus(bus_name);
 
     }
 
-    std::tuple<bool, std::set<std::string_view>*> TransportCatalogue::GetStopInfo(const std::string& stop_name) const {
+    std::tuple<bool, std::set<std::string_view>*> TransportCatalogue::GetStopInfo(const std::string_view& stop_name) const {
 
         const auto it = um_stops_info_.find(stop_name);
         if (it == um_stops_info_.cend()) {
@@ -79,12 +79,12 @@ namespace transport_catalog {
 
     }
 
-    void TransportCatalogue::SetDistanceBetweenStops(Stop* stop1, Stop* stop2, size_t distance) {
+    void TransportCatalogue::SetDistanceBetweenStops(Stop* stop1, Stop* stop2, double distance) {
         um_distance_.emplace(std::make_pair(stop1, stop2), distance);
     }
 
-    size_t TransportCatalogue::GetDistanceBetweenStops(Stop* stop1, Stop* stop2) const {
-        size_t result = 0;
+    double TransportCatalogue::GetDistanceBetweenStops(Stop* stop1, Stop* stop2) const {
+        double result = 0;
 
         auto it = um_distance_.find(std::make_pair(stop1, stop2));
         if (it == um_distance_.end()) {
@@ -96,6 +96,10 @@ namespace transport_catalog {
         }
 
         return result;
+    }
+
+    const std::unordered_map<std::string_view, Bus*>& TransportCatalogue::GetAllBuses() const {
+        return um_busname_to_bus_;
     }
 
 } //transport_catalog

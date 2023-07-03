@@ -15,24 +15,23 @@ int main() {
     TransportCatalogue tc;
     renderer::MapRenderer map_renderer;
     RequestHandler rh{ tc, map_renderer };
-    
-    json::Document doc = ReadFromInput(std::cin, tc, map_renderer, rh);    
+        
+    json::Document doc = rh.ReadAndExecuteRequests(std::cin);
     json::Print(doc, std::cout);
 
-    // чтение из файла и вывод в файл
+    //// чтение из файла и вывод в файл
     //std::ifstream s_in("s10_final_opentest_3.json");
-    //json::Document doc = ReadFromInput(s_in, tc, map_renderer, rh);
+    //json::Document doc = rh.ReadAndExecuteRequests(s_in);
 
     //// просто отрисуем карту
-    ////svg::Document my_map = rh.RenderMap();
-    //////my_map.Render(std::cout);
+    ////svg::Document my_map = map_renderer.RenderMap(rh.GetAllBuses());
+    ////json::Print(my_map, std::cout);
 
-    //std::ofstream fout;
-    //fout.open("my_result.txt", std::ios::app);
-    ////my_map.Render(fout);
-    //json::Print(doc, fout);
-    //
-    //fout.close();
+    /*std::ofstream fout;
+    fout.open("my_result.txt", std::ios::app);    
+    json::Print(doc, fout);
+    
+    fout.close();*/
     
     return 0;
 }

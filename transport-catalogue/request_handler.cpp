@@ -43,90 +43,184 @@ namespace transport_catalog {
 		return std::optional<std::set<std::string_view>*>();
 	}
 
-	svg::Document RequestHandler::RenderMap() const {
-		
-		svg::Document doc_svg;
-
-		std::vector<geo::Coordinates> geo_coords;
-		const std::unordered_map<std::string_view, Bus*>& un_buses = db_.GetAllBuses();
-		
-		// отберем только маршруты у которых есть остановки
-		std::map<std::string_view, Bus*> ordered_buses;
-		std::copy_if(un_buses.cbegin(), un_buses.cend(),
-					std::inserter(ordered_buses, ordered_buses.begin()),
-					[](const auto& el) { return !el.second->stops.empty(); });
-		
-		// Соберем все координаты по непустым маршрутам
-		for (const auto& [bus_name, bus_ptr] : ordered_buses) {
-			for (const Stop* stop_ptr : bus_ptr->stops) {
-				geo_coords.push_back(stop_ptr->coordinates);
-			}
-		}
-
-		const renderer::MapSettings& map_settings = renderer_.GetSettings();
-
-		// Создаём проектор сферических координат на карту
-		const renderer::SphereProjector proj{
-			geo_coords.begin(), geo_coords.end(), map_settings.width, map_settings.height, map_settings.padding
-		};
-
-		size_t index_color{ 0 };
-		const size_t color_max_number = map_settings.color_palette.size() - 1;
-		
-		std::vector<svg::Text> layer2; // содержит надписи и подложки		
-		std::set<Stop*> s_stops; // содержит уникальные остановки для отрисовки третьего и четвертого слоев
-		
-		for (const auto& [name, bus_ptr] : ordered_buses) {
-
-			// определим цвет маршрута
-			if (index_color > color_max_number) { index_color = 0; }
-			
-			//---- слой первый, маршруты. Добавляется сразу ----//
-			map_objects::Routes(doc_svg, proj, bus_ptr->stops, map_settings, index_color, bus_ptr->is_roundtrip);
-			
-			//---- слой второй, подложки и надписи ----//
-			svg::Point screen_coordinates = proj(bus_ptr->stops.front()->coordinates);
-			// подложка
-			layer2.push_back(
-				map_objects::AddRouteName(map_settings, "Verdana", "bold", screen_coordinates, name, index_color, true)
-			);
-			// надпись
-			layer2.push_back(
-				map_objects::AddRouteName(map_settings, "Verdana", "bold", screen_coordinates, name, index_color, false)
-			);
-
-			if (!bus_ptr->is_roundtrip && bus_ptr->stops.front() != bus_ptr->stops.back()) {
-				screen_coordinates = proj(bus_ptr->stops.back()->coordinates);
-				// подложка
-				layer2.push_back(
-					map_objects::AddRouteName(map_settings, "Verdana", "bold", screen_coordinates, name, index_color, true)
-				);
-				// надпись
-				layer2.push_back(
-					map_objects::AddRouteName(map_settings, "Verdana", "bold", screen_coordinates, name, index_color, false)
-				);
-			}
-
-			s_stops.insert(bus_ptr->stops.begin(), bus_ptr->stops.end());
-
-			++index_color;
-		}
-
-		// добавим второй слой на карту
-		for (svg::Text& t : layer2) {
-			doc_svg.Add(t);
-		}
-
-		// переложим в вектор, чтобы можно было отсортировать
-		std::vector<Stop*> v_stops(s_stops.begin(), s_stops.end()); 
-		
-		std::sort(v_stops.begin(), v_stops.end(), [](const Stop* lhs, const Stop* rhs) { return lhs->name < rhs->name; });
-		// добавим третий и четвертый слои
-		map_objects::PointStops(doc_svg, proj, v_stops, map_settings);
-		
-		return doc_svg;
+	const std::unordered_map<std::string_view, Bus*>& RequestHandler::GetAllBuses() const {
+		return db_.GetAllBuses();
 	}
+
+	json::Document RequestHandler::ReadAndExecuteRequests(std::istream& input) {
+		JSONReader json_reader;
+		const Requests requests = json_reader.Read(input);
 		
+		// запросы на добавление информации в базу
+		if (requests.base_requests.size()) {
+			ToBase(requests.base_requests);
+		}
+
+		// запрос настроек для карты
+		if (requests.render_settings.size()) {
+			SettingsForMap(requests.render_settings);
+		}
+
+		// запросы к траспортному каталогу
+		json::Array arr_answers;
+		if (requests.stat_requests.size()) {
+			arr_answers = ToTransportCataloque(requests.stat_requests);
+		}
+
+		return json::Document{ arr_answers };
+	}
+
+	void RequestHandler::ToBase(const json::Array& arr_nodes) {
+
+		// первым проходом обрабатываем все остановки
+		for (int i = 0; i < 2; ++i) {
+
+			std::unordered_map<Stop*, json::Dict> um_distance_to_stops;
+
+			for (const auto& node : arr_nodes) {
+				if (!node.IsMap()) { throw std::invalid_argument("Wrong into file structure"); }
+
+				const json::Dict& map_value = node.AsMap();
+				if (map_value.count("type") == 0) { throw std::invalid_argument("Wrong into file structure"); }
+
+				const std::string& type = map_value.at("type").AsString();
+
+				// обработаем остановки
+				if (i == 0 && type == "Stop") {
+					Stop* stop = CreateStop(map_value);
+					// сохраним дорожное расстояние от этой остановки до соседних.
+					if (map_value.count("road_distances")) {
+						um_distance_to_stops[stop] = map_value.at("road_distances").AsMap();
+					}
+				}
+
+				// обработаем автобусы
+				if (i == 1 && type == "Bus") {
+					CreateBus(map_value);
+				}
+
+			}
+
+			if (um_distance_to_stops.size() > 0) {
+				AddDistanceForStops(um_distance_to_stops);
+			}
+
+		}
+
+	}
+
+	json::Array RequestHandler::ToTransportCataloque(const json::Array& arr_nodes) {
+		
+		json::Array out_arr_nodes;
+
+		for (const json::Node& node : arr_nodes) {
+			if (!node.IsMap()) { throw std::invalid_argument("Wrong into file structure"); }
+
+			const json::Dict& map_value = node.AsMap();
+
+			if (map_value.count("type") == 0) { throw std::invalid_argument("Wrong into file structure"); }
+			const std::string& type = map_value.at("type").AsString();
+
+			if (map_value.count("id") == 0) { throw std::invalid_argument("Wrong into file structure"); }
+			const int request_id = map_value.at("id").AsInt();
+
+			std::string name;
+			if (map_value.count("name")) {
+				name = map_value.at("name").AsString();
+			}
+
+			json::Dict dict;
+
+			if (type == "Stop") {
+				std::optional<std::set<std::string_view>*> stop_info = GetBusesByStop(name);
+				if (stop_info) {
+					dict = OutStopInfo(request_id, stop_info);
+				}
+			}
+			else if (type == "Bus") {
+
+				std::optional<BusStat> bus_info = GetBusStat(name);
+				if (bus_info) {
+					dict = OutBusInfo(request_id, bus_info);
+				}
+
+			}
+			else if (type == "Map") {
+				dict = OutMap(request_id);
+			}
+			/*else {
+				throw std::invalid_argument("Wrong into file structure");
+			}*/
+
+			if (dict.size() == 0) {
+				dict = GetNotFoundNode(map_value.at("id").AsInt());
+			}
+
+			out_arr_nodes.push_back(dict);
+		}
+
+		return out_arr_nodes;
+	}
+
+	void RequestHandler::SettingsForMap(const json::Dict& dict_node) {
+
+		renderer::MapSettings settings;
+		// распарсим и заполним настройки
+		for (const auto& [key, val] : dict_node) {
+
+			if ((key == "bus_label_font_size" || key == "stop_label_font_size") && val.IsInt()) {
+				settings.SetValue(key, static_cast<size_t>(val.AsInt()));
+			}
+			else if (val.IsDouble()) {
+				settings.SetValue(key, val.AsDouble());
+			}
+			else if (val.IsString()) {
+				settings.SetValue(key, val.AsString());
+			}
+			else if (val.IsArray()) {
+				const json::Array& arr = val.AsArray();
+
+				if (key == "bus_label_offset" || key == "stop_label_offset") { //svg::Point
+					settings.SetValue(key, svg::Point(arr[0].AsDouble(), arr[1].AsDouble()));
+				}
+				else if (key == "underlayer_color") { //svg::Color
+					if (arr.size() == 3) {
+						settings.SetValue(key, svg::Rgb(arr[0].AsInt(), arr[1].AsInt(), arr[2].AsInt()));
+					}
+					else {
+						settings.SetValue(key, svg::Rgba(arr[0].AsInt(), arr[1].AsInt(), arr[2].AsInt(), arr[3].AsDouble()));
+					}
+				}
+				else if (key == "color_palette") {  //std::vector<svg::Color> 
+					std::vector<svg::Color> v_colors;
+					v_colors.reserve(arr.size());
+
+					for (const json::Node& elem : arr) {
+						if (elem.IsString()) {
+							v_colors.push_back(elem.AsString());
+						}
+						else if (elem.IsArray()) {
+							const json::Array& arr_color = elem.AsArray();
+							if (arr_color.size() == 3) {
+								v_colors.push_back(svg::Rgb(arr_color[0].AsInt(), arr_color[1].AsInt(), arr_color[2].AsInt()));
+							}
+							else {
+								v_colors.push_back(svg::Rgba(arr_color[0].AsInt(), arr_color[1].AsInt(), arr_color[2].AsInt(), arr_color[3].AsDouble()));
+							}
+						}
+					}
+
+					settings.SetValue(key, v_colors);
+				}
+
+			}
+
+		}
+
+		renderer_.SetSettings(settings);
+
+	}
+
 	size_t RequestHandler::GetUniqueStops(const std::vector<Stop*>& v_stops) const {
 		
 		std::unordered_set<std::string_view> un_set_unique_stops;
@@ -172,113 +266,93 @@ namespace transport_catalog {
 		return result;
 	}
 
-	namespace map_objects {
+	Stop* RequestHandler::CreateStop(const json::Dict map_stop) {
+		return db_.AddStop(map_stop.at("name").AsString(), map_stop.at("latitude").AsDouble(), map_stop.at("longitude").AsDouble());
+	}
 
-		void Routes(svg::Document& doc, const renderer::SphereProjector& proj, const std::vector<Stop*>& v_stops, const renderer::MapSettings& settings, const size_t color_number, const bool is_roundtrip) {
-			svg::Polyline line_of_bus;
+	void RequestHandler::AddDistanceForStops(const std::unordered_map<transport_catalog::Stop*, json::Dict>& un_distance) {
 
-			svg::Color stroke = settings.color_palette[color_number];
+		for (const auto& [stop1, map_dist] : un_distance) {
 
-			// зададим точки, координаты
-			for (const Stop* stop_ptr : v_stops) {
+			for (const auto& [stop_name, node_dist] : map_dist) {
 
-				svg::Point screen_coord = proj(stop_ptr->coordinates);
-				line_of_bus.AddPoint(screen_coord);
-
-			}
-
-			// для не кольцевого маршрута нарисуем еще и в обратном направлении(пропускаем текущую точку)
-			if (!is_roundtrip) {
-				for (size_t i = v_stops.size()-1; i > 0; --i) {
-					svg::Point screen_coord = proj(v_stops[(i - 1)]->coordinates);
-					line_of_bus.AddPoint(screen_coord);
+				Stop* stop2 = db_.FindStop(stop_name);
+				if (stop2 != nullptr) {
+					db_.SetDistanceBetweenStops(stop1, stop2, node_dist.AsInt());
 				}
 
 			}
 
-			doc.Add(line_of_bus
-				.SetStrokeColor(stroke)
-				.SetFillColor(svg::NoneColor)
-				.SetStrokeWidth(settings.line_width)
-				.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-				.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
-			);
 		}
 
-		void PointStops(svg::Document& doc, const renderer::SphereProjector& proj, const std::vector<Stop*>& v_stops, const renderer::MapSettings& settings) {
+	}
 
-			std::vector<svg::Text> v_stop_names;
-			v_stop_names.reserve(v_stops.size());
-
-			for (const Stop* stop_ptr : v_stops) {
-				svg::Point screen_coordinates = proj(stop_ptr->coordinates);
-				
-				svg::Circle circle;
-				doc.Add(circle
-							.SetCenter(screen_coordinates)
-							.SetRadius(settings.stop_radius)
-							.SetFillColor(svg::Color("white"))
-				
-				);
-
-				// сохраним подложки и имена
-				v_stop_names.push_back(AddStopName(settings, "Verdana", screen_coordinates, stop_ptr->name, true));
-				v_stop_names.push_back(AddStopName(settings, "Verdana", screen_coordinates, stop_ptr->name, false));
-			}
-
-			// добавим названия остановок
-			for (svg::Text t : v_stop_names) {
-				doc.Add(t);
-			}
-
-		}
+	Bus* RequestHandler::CreateBus(const json::Dict map_bus) {
 		
-		svg::Text AddRouteName(const renderer::MapSettings& settings, const std::string& font_family, const std::string& font_wight, const svg::Point screen_coord, const std::string_view& name, const size_t index_color, const bool is_substrate) {
-			
-			svg::Text text;
-			text.SetPosition(screen_coord)
-				.SetOffset(settings.bus_label_offset)
-				.SetFontSize(settings.bus_label_font_size)
-				.SetFontFamily(font_family)
-				.SetFontWeight(font_wight)
-				.SetData(static_cast<std::string>(name))
-				.SetFillColor(settings.color_palette[index_color]);
+		const json::Array& stops = map_bus.at("stops").AsArray();
+		std::vector<std::string> v_stops;
+		v_stops.reserve(stops.size());
 
-			if (is_substrate) {
-				text.SetFillColor(settings.underlayer_color)
-					.SetStrokeColor(settings.underlayer_color)
-					.SetStrokeWidth(settings.underlayer_width)
-					.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-					.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
-			}
-						
-			return text;
-
+		for (const json::Node& n_stop : stops) {
+			v_stops.push_back(n_stop.AsString());
 		}
 
-		svg::Text AddStopName(const renderer::MapSettings& settings, const std::string& font_family, const svg::Point screen_coord, const std::string_view& name, const bool is_substrate) {
-			
-			svg::Text text;
-			text.SetPosition(screen_coord)
-				.SetOffset(settings.stop_label_offset)
-				.SetFontSize(settings.stop_label_font_size)
-				.SetFontFamily(font_family)
-				.SetData(static_cast<std::string>(name))
-				.SetFillColor(svg::Color("black"));
-			
-			if (is_substrate) {
-				text.SetFillColor(settings.underlayer_color)
-					.SetStrokeColor(settings.underlayer_color)
-					.SetStrokeWidth(settings.underlayer_width)
-					.SetStrokeLineCap(svg::StrokeLineCap::ROUND)
-					.SetStrokeLineJoin(svg::StrokeLineJoin::ROUND);
-			}
+		return db_.AddBus(map_bus.at("name").AsString(), v_stops, map_bus.at("is_roundtrip").AsBool());
+		
+	}
 
-			return text;
+	json::Dict RequestHandler::GetNotFoundNode(const int id) {
+
+		json::Dict result;
+		result.insert({ std::move("request_id"), json::Node(id) });
+
+		result.insert({ std::move("error_message"), json::Node(std::string{"not found"}) });
+
+		return result;
+	}
+
+	json::Dict RequestHandler::OutBusInfo(const int id, const std::optional<BusStat>& bus_info) {
+		
+		json::Dict result;
+
+		result.insert({ std::move("request_id"), json::Node(id) });
+		result.insert({ std::move("curvature"), json::Node(bus_info->curvature) });
+		result.insert({ std::move("route_length"), json::Node(bus_info->route_length) });
+		result.insert({ std::move("stop_count"), json::Node(bus_info->stop_count) });
+		result.insert({ std::move("unique_stop_count"), json::Node(bus_info->unique_stop_count) });
+
+		return result;
+	}
+
+	json::Dict RequestHandler::OutStopInfo(const int id, const std::optional<std::set<std::string_view>*>& stop_info) {
+		
+		json::Dict result;
+		result.insert({ std::move("request_id"), json::Node(id) });
+
+		json::Array arr_buses;
+
+		for (const auto& el : *stop_info.value()) {
+			arr_buses.push_back(std::move(json::Node(static_cast<std::string>(el))));
 		}
 
+		result.insert({ std::move("buses"), arr_buses });
 
-	} // namespace map_objects
+		return result;
+	}
+
+	json::Dict RequestHandler::OutMap(const int id) {
+
+		json::Dict result;
+		result.insert({ std::move("request_id"), json::Node(id) });
+		
+		// получим готовую карту
+		std::ostringstream os;
+		renderer_.RenderMap(GetAllBuses()).Render(os);
+
+		result.insert({ "map", os.str() });
+
+		return result;
+	}
 
 
 }	// namespace transport_catalog

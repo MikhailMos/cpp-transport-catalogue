@@ -3,12 +3,14 @@
 #include <optional>
 #include <unordered_set>
 #include <unordered_map>
-#include <map>
+#include <string_view>
 #include <algorithm>
 
 #include "domain.h"
 #include "transport_catalogue.h"
 #include "map_renderer.h"
+#include "json.h"
+#include "json_reader.h"
 
 
 namespace transport_catalog {
@@ -26,7 +28,7 @@ namespace transport_catalog {
     class RequestHandler {
     public:
         RequestHandler() = default;
-        RequestHandler(const TransportCatalogue& db, const renderer::MapRenderer& renderer)
+        RequestHandler(TransportCatalogue& db, renderer::MapRenderer& renderer)
             : db_(db)
             , renderer_(renderer)
         {}
@@ -35,13 +37,22 @@ namespace transport_catalog {
         std::optional<BusStat> GetBusStat(const std::string_view& bus_name) const;
         // Возвращает маршруты, проходящие через остановку
         std::optional<std::set<std::string_view>*> GetBusesByStop(const std::string_view& stop_name) const;
-                
-        svg::Document RenderMap() const;
+        // получает все маршруты хранящиеся в базе
+        const std::unordered_map<std::string_view, Bus*>& GetAllBuses() const;
+
+        // возвращает ответы на запросы к транспортному каталогу
+        json::Document ReadAndExecuteRequests(std::istream& input);
+        // обрабатывает запросы добавления в транспортный справочник
+        void ToBase(const json::Array& arr_nodes);
+        // обрабатывает запросы к транспортному справочнику и выводит готовый результат
+        json::Array ToTransportCataloque(const json::Array& arr_nodes);
+        // обрабатывает настройки карты и передает их в модуль map_renderer
+        void SettingsForMap(const json::Dict& dict_node);       
 
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
-        const TransportCatalogue& db_{};
-        const renderer::MapRenderer& renderer_{};
+        TransportCatalogue& db_;
+        renderer::MapRenderer& renderer_;
 
         // возвращает кол-во уникальных остановок
         size_t GetUniqueStops(const std::vector<Stop*>& v_stops) const;
@@ -50,16 +61,17 @@ namespace transport_catalog {
         // возвращает фактическую длину маршрута
         double GetLengthOfDistance(const std::vector<Stop*>& v_stops, const bool is_roundtrip) const;
 
+        // ф-и для ввода информаци
+        Stop* CreateStop(const json::Dict map_stop);
+        void AddDistanceForStops(const std::unordered_map<transport_catalog::Stop*, json::Dict>& un_distance);
+        Bus* CreateBus(const json::Dict map_bus);
+        
+        // ф-и для вывода информации
+        json::Dict GetNotFoundNode(const int id);
+        json::Dict OutBusInfo(const int id, const std::optional<BusStat>& bus_info);
+        json::Dict OutStopInfo(const int id, const std::optional<std::set<std::string_view>*>& stop_info);
+        json::Dict OutMap(const int id);
     };
 
-    namespace map_objects {
-        
-        void Routes(svg::Document& doc, const renderer::SphereProjector& proj, const std::vector<Stop*>& v_stops, const renderer::MapSettings& settings, const size_t color_number, const bool is_roundtrip);
-        void PointStops(svg::Document& doc, const renderer::SphereProjector& proj, const std::vector<Stop*>& v_stops, const renderer::MapSettings& settings);
-        svg::Text AddRouteName(const renderer::MapSettings& settings, const std::string& font_family, const std::string& font_wight, const svg::Point screen_coord, const std::string_view& name, const size_t index_color, const bool is_substrate);
-        svg::Text AddStopName(const renderer::MapSettings& settings, const std::string& font_family, const svg::Point screen_coord, const std::string_view& name, const bool is_substrate);
-
-    }   // namespace map_objects
-    
 
 }   // namespace transport_catalog

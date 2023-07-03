@@ -2,8 +2,14 @@
 
 #include "svg.h"
 #include "geo.h"
+#include "domain.h"
 
 #include <algorithm>
+#include <vector>
+#include <string>
+#include <map>
+#include <unordered_map>
+#include <set>
 
 namespace transport_catalog {
     
@@ -65,8 +71,14 @@ namespace transport_catalog {
             double GetWidth() const;
             double GetHeight() const;
             double GetPadding() const;
+            svg::Document RenderMap(const std::unordered_map<std::string_view, Bus*>& un_buses) const;
         private:
             MapSettings map_settings_;
+
+            void Routes(svg::Document& doc, const SphereProjector& proj, const std::vector<Stop*>& v_stops, const MapSettings& settings, const size_t color_number, const bool is_roundtrip) const;
+            void PointStops(svg::Document& doc, const renderer::SphereProjector& proj, std::vector<Stop*>& v_stops, const renderer::MapSettings& settings) const;
+            svg::Text AddRouteName(const renderer::MapSettings& settings, const std::string& font_family, const std::string& font_wight, const svg::Point screen_coord, const std::string_view& name, const size_t index_color, const bool is_substrate) const;
+            svg::Text AddStopName(const renderer::MapSettings& settings, const std::string& font_family, const svg::Point screen_coord, const std::string_view& name, const bool is_substrate) const;
         };
 
         //----- шаблонные функции -----//

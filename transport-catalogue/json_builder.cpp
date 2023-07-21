@@ -3,8 +3,7 @@
 namespace json {
 
 
-
-    DictItemContext Builder::StartDict()
+    Builder::DictItemContext Builder::StartDict()
     {
         using namespace std::literals;
 
@@ -30,7 +29,7 @@ namespace json {
                     throw std::logic_error("StartDict: not called Key method before"s);
                 }
 
-                auto& curr_elem = dic.at(is_found.second);
+                json::Node& curr_elem = dic.at(is_found.second);
                 curr_elem = std::move(node);
                 nodes_stack_.push_back(&curr_elem);
 
@@ -68,7 +67,7 @@ namespace json {
         return *this;
     }
 
-    ArrayItemContext Builder::StartArray()
+    Builder::ArrayItemContext Builder::StartArray()
     {
         using namespace std::literals;
 
@@ -88,13 +87,13 @@ namespace json {
             }
             else if (last_node_ptr->IsDict()) {
                 json::Dict& dic = std::get<json::Dict>(last_node_ptr->GetValue());
-                
+
                 std::pair<bool, std::string> is_found = ditails::GetKeyWithEmptyValue(dic);
                 if (!is_found.first) {
                     throw std::logic_error("StartArray: not called Key method before"s);
                 }
 
-                auto& curr_elem = dic.at(is_found.second);
+                json::Node& curr_elem = dic.at(is_found.second);
                 curr_elem = std::move(node);
                 nodes_stack_.push_back(&curr_elem);
 
@@ -130,7 +129,7 @@ namespace json {
         return *this;
     }
 
-    KeyContext Builder::Key(std::string key)
+    Builder::DictValueContext Builder::Key(std::string key)
     {
         using namespace std::literals;
 
@@ -147,7 +146,7 @@ namespace json {
 
         dic.insert(std::pair{ key, json::Node() });
 
-        return BaseContext{ *this }; //KeyContext(*this);
+        return BaseContext{ *this }; //DictValueContext(*this);
     }
 
     Builder& Builder::Value(Node::Value val)
@@ -204,8 +203,8 @@ namespace json {
 
     namespace ditails {
 
-        bool HasEmptyValues(const json::Dict& dict) {
-            return std::any_of(dict.cbegin(), dict.cend(),
+        bool HasEmptyValues(const json::Dict& dic) {
+            return std::any_of(dic.cbegin(), dic.cend(),
                 [](const std::pair<std::string, Node>& el) {
                     return el.second.IsNull();
                 });
@@ -229,64 +228,64 @@ namespace json {
     } // namespace ditails
 
 
-    DictItemContext BaseContext::StartDict()
+    Builder::DictItemContext Builder::BaseContext::StartDict()
     {
         return builder_.StartDict();
     }
 
-    Builder& BaseContext::EndDict()
+    Builder& Builder::BaseContext::EndDict()
     {
         return builder_.EndDict();
     }
 
-    ArrayItemContext BaseContext::StartArray()
+    Builder::ArrayItemContext Builder::BaseContext::StartArray()
     {
         return builder_.StartArray();
     }
 
-    Builder& BaseContext::EndArray()
+    Builder& Builder::BaseContext::EndArray()
     {
         return builder_.EndArray();
     }
 
-    KeyContext BaseContext::Key(std::string key)
+    Builder::DictValueContext Builder::BaseContext::Key(std::string key)
     {
         return builder_.Key(std::move(key));
     }
 
-    Builder& BaseContext::Value(Node::Value val)
+    Builder& Builder::BaseContext::Value(Node::Value val)
     {
         return builder_.Value(std::move(val));
     }
 
-    Node BaseContext::Build()
+    Node Builder::BaseContext::Build()
     {
         return builder_.Build();
     }
 
-    Builder& BaseContext::GetBuilder()
+    Builder& Builder::BaseContext::GetBuilder()
     {
         return builder_;
     }
 
-    DictItemContext::DictItemContext(BaseContext base)
+    Builder::DictItemContext::DictItemContext(BaseContext base)
         : BaseContext(base)
     {}
 
-    ArrayItemContext::ArrayItemContext(BaseContext base)
+    Builder::ArrayItemContext::ArrayItemContext(BaseContext base)
         : BaseContext(base)
     {}
 
-    ArrayItemContext ArrayItemContext::Value(Node::Value val)
+    Builder::ArrayItemContext Builder::ArrayItemContext::Value(Node::Value val)
     {
         return BaseContext{ BaseContext::Value(std::move(val)) };
     }
 
-    KeyContext::KeyContext(BaseContext base)
+    Builder::DictValueContext::DictValueContext(BaseContext base)
         : BaseContext(base)
     {}
 
-    DictItemContext KeyContext::Value(Node::Value val)
+    Builder::DictItemContext Builder::DictValueContext::Value(Node::Value val)
     {
         return BaseContext{ BaseContext::Value(std::move(val)) };
     }

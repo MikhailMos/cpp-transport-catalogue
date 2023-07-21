@@ -11,6 +11,7 @@
 #include "map_renderer.h"
 #include "json.h"
 #include "json_reader.h"
+#include "json_builder.h"
 
 
 namespace transport_catalog {

@@ -25,14 +25,15 @@ namespace json {
             else if (last_node_ptr->IsDict()) {
                 json::Dict& dic = std::get<json::Dict>(last_node_ptr->GetValue());
 
-                auto rit = dic.rbegin();
-
-                if (dic.empty() || !rit->second.IsNull()) {
+                std::pair<bool, std::string> is_found = ditails::GetKeyWithEmptyValue(dic);
+                if (!is_found.first) {
                     throw std::logic_error("StartDict: not called Key method before"s);
                 }
 
-                rit->second = std::move(node);
-                nodes_stack_.push_back(&rit->second);
+                auto& curr_elem = dic.at(is_found.second);
+                curr_elem = std::move(node);
+                nodes_stack_.push_back(&curr_elem);
+
             }
             else {
                 throw std::logic_error("StartDict: invalid method"s);
@@ -87,14 +88,16 @@ namespace json {
             }
             else if (last_node_ptr->IsDict()) {
                 json::Dict& dic = std::get<json::Dict>(last_node_ptr->GetValue());
-                auto rit = dic.rbegin();
-
-                if (dic.empty() || !rit->second.IsNull()) {
+                
+                std::pair<bool, std::string> is_found = ditails::GetKeyWithEmptyValue(dic);
+                if (!is_found.first) {
                     throw std::logic_error("StartArray: not called Key method before"s);
                 }
 
-                rit->second = std::move(node);
-                nodes_stack_.push_back(&rit->second);
+                auto& curr_elem = dic.at(is_found.second);
+                curr_elem = std::move(node);
+                nodes_stack_.push_back(&curr_elem);
+
             }
             else {
                 throw std::logic_error("StartArray: invalid method"s);
@@ -165,9 +168,9 @@ namespace json {
                     throw std::logic_error("Value: not called Key method before"s);
                 }
 
-                auto rit = dic.rbegin();
-                if (rit->second.IsNull()) {
-                    rit->second = val;
+                std::pair<bool, std::string> is_found = ditails::GetKeyWithEmptyValue(dic);
+                if (is_found.first) {
+                    dic[is_found.second] = val;
                 }
                 else {
                     throw std::logic_error("Value: method called after another Value method"s);
@@ -201,12 +204,27 @@ namespace json {
 
     namespace ditails {
 
-        bool HasEmptyValues(json::Dict dic) {
-            return std::any_of(dic.begin(), dic.end(),
+        bool HasEmptyValues(const json::Dict& dict) {
+            return std::any_of(dict.cbegin(), dict.cend(),
                 [](const std::pair<std::string, Node>& el) {
                     return el.second.IsNull();
                 });
         }
+
+        std::pair<bool, std::string> GetKeyWithEmptyValue(const json::Dict& dict) {
+            std::pair<bool, std::string> pair_found{ false, "" };
+
+            for (const auto& el : dict) {
+                if (el.second.IsNull()) {
+                    pair_found.first = true;
+                    pair_found.second = el.first;
+                    break;
+                }
+            }
+
+            return pair_found;
+        }
+
 
     } // namespace ditails
 

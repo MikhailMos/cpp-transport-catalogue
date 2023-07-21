@@ -78,9 +78,9 @@ namespace transport_catalog {
 			std::unordered_map<Stop*, json::Dict> um_distance_to_stops;
 
 			for (const auto& node : arr_nodes) {
-				if (!node.IsMap()) { throw std::invalid_argument("Wrong into file structure"); }
+				if (!node.IsDict()) { throw std::invalid_argument("Wrong into file structure"); }
 
-				const json::Dict& map_value = node.AsMap();
+				const json::Dict& map_value = node.AsDict();
 				if (map_value.count("type") == 0) { throw std::invalid_argument("Wrong into file structure"); }
 
 				const std::string& type = map_value.at("type").AsString();
@@ -90,7 +90,7 @@ namespace transport_catalog {
 					Stop* stop = CreateStop(map_value);
 					// сохраним дорожное расстояние от этой остановки до соседних.
 					if (map_value.count("road_distances")) {
-						um_distance_to_stops[stop] = map_value.at("road_distances").AsMap();
+						um_distance_to_stops[stop] = map_value.at("road_distances").AsDict();
 					}
 				}
 
@@ -114,9 +114,9 @@ namespace transport_catalog {
 		json::Array out_arr_nodes;
 
 		for (const json::Node& node : arr_nodes) {
-			if (!node.IsMap()) { throw std::invalid_argument("Wrong into file structure"); }
+			if (!node.IsDict()) { throw std::invalid_argument("Wrong into file structure"); }
 
-			const json::Dict& map_value = node.AsMap();
+			const json::Dict& map_value = node.AsDict();
 
 			if (map_value.count("type") == 0) { throw std::invalid_argument("Wrong into file structure"); }
 			const std::string& type = map_value.at("type").AsString();
@@ -302,56 +302,72 @@ namespace transport_catalog {
 	}
 
 	json::Dict RequestHandler::GetNotFoundNode(const int id) {
+		
+		using namespace std::literals;
 
-		json::Dict result;
-		result.insert({ std::move("request_id"), json::Node(id) });
-
-		result.insert({ std::move("error_message"), json::Node(std::string{"not found"}) });
-
-		return result;
+		return json::Builder{}
+			.StartDict()
+				.Key("request_id"s).Value(id)
+				.Key("error_message"s).Value("not found"s)
+			.EndDict()
+			.Build()
+			.AsDict();
 	}
 
 	json::Dict RequestHandler::OutBusInfo(const int id, const std::optional<BusStat>& bus_info) {
 		
-		json::Dict result;
+		using namespace std::literals;
 
-		result.insert({ std::move("request_id"), json::Node(id) });
-		result.insert({ std::move("curvature"), json::Node(bus_info->curvature) });
-		result.insert({ std::move("route_length"), json::Node(bus_info->route_length) });
-		result.insert({ std::move("stop_count"), json::Node(bus_info->stop_count) });
-		result.insert({ std::move("unique_stop_count"), json::Node(bus_info->unique_stop_count) });
+		return json::Builder{}
+			.StartDict()
+				.Key("request_id"s).Value(id)
+				.Key("curvature"s).Value(bus_info->curvature)
+				.Key("route_length"s).Value(bus_info->route_length)
+				.Key("stop_count"s).Value(bus_info->stop_count)
+				.Key("unique_stop_count"s).Value(bus_info->unique_stop_count)
+			.EndDict()
+			.Build()
+			.AsDict();
 
-		return result;
 	}
 
 	json::Dict RequestHandler::OutStopInfo(const int id, const std::optional<std::set<std::string_view>*>& stop_info) {
 		
-		json::Dict result;
-		result.insert({ std::move("request_id"), json::Node(id) });
+		using namespace std::literals;
 
-		json::Array arr_buses;
+		json::Builder builder;
+
+		builder.StartDict()
+			.Key("request_id"s).Value(id)
+			.Key("buses"s).StartArray();
 
 		for (const auto& el : *stop_info.value()) {
-			arr_buses.push_back(std::move(json::Node(static_cast<std::string>(el))));
+			builder.Value(static_cast<std::string>(el));
 		}
-
-		result.insert({ std::move("buses"), arr_buses });
-
-		return result;
+		
+		builder.EndArray()
+			.EndDict();
+			
+		return builder.Build().AsDict();
 	}
 
 	json::Dict RequestHandler::OutMap(const int id) {
 
-		json::Dict result;
-		result.insert({ std::move("request_id"), json::Node(id) });
-		
+		using namespace std::literals;
+
+		json::Builder builder;
+
+		builder.StartDict()
+			.Key("request_id"s).Value(id);
+
 		// получим готовую карту
 		std::ostringstream os;
 		renderer_.RenderMap(GetAllBuses()).Render(os);
 
-		result.insert({ "map", os.str() });
+		builder.Key("map"s).Value(os.str())
+			.EndDict();
 
-		return result;
+		return builder.Build().AsDict();
 	}
 
 

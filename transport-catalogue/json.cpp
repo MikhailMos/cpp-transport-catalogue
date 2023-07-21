@@ -227,12 +227,24 @@ Node LoadNode(istream& input) {
 }  // namespace
 
 //----- Node -----
+Node::Node(Node::Value value)
+    : variant(std::move(value))
+{}
+
 const Node::Value& Node::GetValue() const { return *this; }
 
 Node::Value& Node::GetValue() { return *this; }
 
 bool Node::IsInt() const {    
     return std::holds_alternative<int>(*this);
+}
+
+int  Node::AsInt() const {
+    if (!IsInt()) {
+        throw std::logic_error("Contains a value of another type"s);
+    }
+
+    return std::get<int>(*this);
 }
 
 bool Node::IsDouble() const {
@@ -243,12 +255,35 @@ bool Node::IsPureDouble() const {
     return std::holds_alternative<double>(*this);
 }
 
+double  Node::AsDouble() const {
+    if (!IsDouble()) {
+        throw std::logic_error("Not a double"s);
+    }
+    return IsPureDouble() ? std::get<double>(*this) : AsInt();
+}
+
 bool Node::IsBool() const {
     return std::holds_alternative<bool>(*this);
 }
 
+bool  Node::AsBool() const {
+    if (!IsBool()) {
+        throw std::logic_error("Not a bool"s);
+    }
+
+    return std::get<bool>(*this);
+}
+
 bool Node::IsString() const {
     return std::holds_alternative<std::string>(*this);
+}
+
+const std::string& Node::AsString() const {
+    if (!IsString()) {
+        throw std::logic_error("Not a string"s);
+    }
+
+    return std::get<std::string>(*this);
 }
 
 bool Node::IsNull() const {
@@ -259,52 +294,21 @@ bool Node::IsArray() const {
     return std::holds_alternative<Array>(*this);
 }
 
-bool Node::IsMap() const {
-    return std::holds_alternative<Dict>(*this);
-}
-
-int  Node::AsInt() const {
-    if (!IsInt()) {
-        throw std::logic_error("Contains a value of another type"s);
-    }
-    
-    return std::get<int>(*this);
-}
-
-bool  Node::AsBool() const {
-    if (!IsBool()) {
-        throw std::logic_error("Contains a value of another type"s);
-    }
-    
-    return std::get<bool>(*this);
-}
-
-double  Node::AsDouble() const {
-    if (!IsDouble()) {
-        throw std::logic_error("Contains a value of another type"s);
-    }
-    return IsPureDouble() ? std::get<double>(*this) : AsInt();
-}
-
-const std::string& Node::AsString() const {
-    if (!IsString()) {
-        throw std::logic_error("Contains a value of another type"s);
-    }
-
-    return std::get<std::string>(*this);
-}
-
 const Array& Node::AsArray() const {
     if (!IsArray()) {
-        throw std::logic_error("Contains a value of another type"s);
+        throw std::logic_error("Not an array"s);
     }
 
     return std::get<Array>(*this);
 }
 
-const Dict& Node::AsMap() const {
-    if (!IsMap()) {
-        throw std::logic_error("Contains a value of another type"s);
+bool Node::IsDict() const {
+    return std::holds_alternative<Dict>(*this);
+}
+
+const Dict& Node::AsDict() const {
+    if (!IsDict()) {
+        throw std::logic_error("Not a dict"s);
     }
 
     return std::get<Dict>(*this);

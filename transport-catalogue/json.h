@@ -23,24 +23,32 @@ class Node final : private std::variant<std::nullptr_t, Array, Dict, bool, int, 
 public:
     using variant::variant;
     using Value = variant;
+
+    Node(Value value);
     
     const Value& GetValue() const;
     Value& GetValue();
+    
     bool IsInt() const;
+    int AsInt() const;
+
     bool IsDouble() const;
     bool IsPureDouble() const;
-    bool IsBool() const;
-    bool IsString() const;
-    bool IsNull() const;
-    bool IsArray() const;
-    bool IsMap() const;
-
-    int AsInt() const;
-    bool AsBool() const;
     double AsDouble() const;
+
+    bool IsBool() const;
+    bool AsBool() const;
+
+    bool IsString() const;
     const std::string& AsString() const;
+
+    bool IsNull() const;
+
+    bool IsArray() const;
     const Array& AsArray() const;
-    const Dict& AsMap() const;
+
+    bool IsDict() const;
+    const Dict& AsDict() const;
 
     bool operator==(const Node& rhs) const;
     bool operator!=(const Node& rhs) const;

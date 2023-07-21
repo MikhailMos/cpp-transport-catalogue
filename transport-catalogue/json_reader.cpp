@@ -10,9 +10,9 @@ namespace transport_catalog {
 
         const json::Node& node = doc.GetRoot();
 
-        if (!node.IsMap()) { throw std::invalid_argument("Wrong into file structure"); }
+        if (!node.IsDict()) { throw std::invalid_argument("Wrong into file structure"); }
 
-        for (const auto& [key, val] : node.AsMap()) {
+        for (const auto& [key, val] : node.AsDict()) {
 
             if (val.IsArray()) {
 
@@ -27,9 +27,9 @@ namespace transport_catalog {
                     requests.stat_requests = arr_nodes;
                 }
             }
-            else if (val.IsMap()) {
+            else if (val.IsDict()) {
 
-                const json::Dict& dict_node = val.AsMap();
+                const json::Dict& dict_node = val.AsDict();
                 // словарь настроек визуализации карты
                 if (key == "render_settings") {                    
                     requests.render_settings = dict_node;

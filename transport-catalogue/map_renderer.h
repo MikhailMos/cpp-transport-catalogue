@@ -72,6 +72,7 @@ namespace transport_catalog {
             double GetHeight() const;
             double GetPadding() const;
             svg::Document RenderMap(const std::unordered_map<std::string_view, Bus*>& un_buses) const;
+
         private:
             MapSettings map_settings_;
 

@@ -22,6 +22,7 @@ int main() {
     //// чтение из файла и вывод в файл
     //std::ifstream s_in("s10_final_opentest_3.json");
     //json::Document doc = rh.ReadAndExecuteRequests(s_in);
+    //json::Print(doc, std::cout);
 
     //// просто отрисуем карту
     ////svg::Document my_map = map_renderer.RenderMap(rh.GetAllBuses());

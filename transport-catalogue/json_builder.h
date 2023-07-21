@@ -87,7 +87,10 @@ namespace json {
 	};
 
 	namespace ditails {
-		bool HasEmptyValues(json::Dict dic);
+		// проверяет есть ли пустые значения в Dict
+		bool HasEmptyValues(const json::Dict& dict);
+		// возвращает ключ у которого пустое значение
+		std::pair<bool, std::string> GetKeyWithEmptyValue(const json::Dict& dict);
 	}
 
 } //namespace json

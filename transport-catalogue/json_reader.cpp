@@ -34,6 +34,10 @@ namespace transport_catalog {
                 if (key == "render_settings") {                    
                     requests.render_settings = dict_node;
                 }
+                // словарь настроек маршрутизации
+                else if (key == "routing_settings") {
+                    requests.routing_settings = dict_node;
+                }
 
             }
 

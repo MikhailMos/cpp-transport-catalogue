@@ -12,6 +12,7 @@
 #include "json.h"
 #include "json_reader.h"
 #include "json_builder.h"
+#include "transport_router.h"
 
 
 namespace transport_catalog {
@@ -22,16 +23,17 @@ namespace transport_catalog {
         std::string_view& name;
         double geo_route_length;
         double route_length;        
-        std::uint8_t stop_count, unique_stop_count;
+        std::uint16_t stop_count, unique_stop_count;
         double curvature;
     };
 
     class RequestHandler {
     public:
         RequestHandler() = default;
-        RequestHandler(TransportCatalogue& db, renderer::MapRenderer& renderer)
+        RequestHandler(TransportCatalogue& db, renderer::MapRenderer& renderer, TransportRouter& transport_router)
             : db_(db)
             , renderer_(renderer)
+            , transport_router_(transport_router)
         {}
         
         // Возвращает информацию о маршруте (запрос Bus)
@@ -48,12 +50,15 @@ namespace transport_catalog {
         // обрабатывает запросы к транспортному справочнику и выводит готовый результат
         json::Array ToTransportCataloque(const json::Array& arr_nodes);
         // обрабатывает настройки карты и передает их в модуль map_renderer
-        void SettingsForMap(const json::Dict& dict_node);       
+        void SettingsForMap(const json::Dict& dict_node);
+        // обрабатыает настройки маршрутизации
+        void SetRoutingSettings(const json::Dict& dict_node);
 
     private:
-        // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
+        // RequestHandler использует агрегацию объектов "Транспортный Справочник", "Визуализатор Карты", "Маршрутизация транспорта"
         TransportCatalogue& db_;
         renderer::MapRenderer& renderer_;
+        TransportRouter& transport_router_;
 
         // возвращает кол-во уникальных остановок
         size_t GetUniqueStops(const std::vector<Stop*>& v_stops) const;
@@ -72,6 +77,7 @@ namespace transport_catalog {
         json::Dict OutBusInfo(const int id, const std::optional<BusStat>& bus_info);
         json::Dict OutStopInfo(const int id, const std::optional<std::set<std::string_view>*>& stop_info);
         json::Dict OutMap(const int id);
+        json::Dict OutRoutInfo(const int id, const std::string& stop_from, const std::string& stop_to);
     };
 
 

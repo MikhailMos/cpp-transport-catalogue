@@ -1,5 +1,6 @@
 #include "request_handler.h"
 
+
 namespace transport_catalog {
 	
 	BusStat::BusStat(std::string_view sv_name, double geo_length, double length, size_t count, size_t unique_count)
@@ -61,9 +62,17 @@ namespace transport_catalog {
 			SettingsForMap(requests.render_settings);
 		}
 
+		// запрос настроек маршрутизации (время ожидания автобуса и скорость автобуса)
+		if (requests.routing_settings.size()) {
+			SetRoutingSettings(requests.routing_settings);
+		}
+
 		// запросы к траспортному каталогу
 		json::Array arr_answers;
 		if (requests.stat_requests.size()) {
+			// сначала построим граф
+			transport_router_.BuildGraph(db_);
+
 			arr_answers = ToTransportCataloque(requests.stat_requests);
 		}
 
@@ -148,6 +157,16 @@ namespace transport_catalog {
 			else if (type == "Map") {
 				dict = OutMap(request_id);
 			}
+			else if (type == "Route") {
+				std::string stop_from, stop_to;
+				if (map_value.count("from")) {
+					stop_from = map_value.at("from").AsString();
+				}
+				if (map_value.count("to")) {
+					stop_to = map_value.at("to").AsString();
+				}
+				dict = OutRoutInfo(request_id, stop_from, stop_to);
+			}
 			/*else {
 				throw std::invalid_argument("Wrong into file structure");
 			}*/
@@ -218,6 +237,20 @@ namespace transport_catalog {
 		}
 
 		renderer_.SetSettings(settings);
+
+	}
+
+	void RequestHandler::SetRoutingSettings(const json::Dict& dict_node) {
+		
+		// распарсим и заполним настройки
+		for (const auto& [key, val] : dict_node) {
+			if (key == "bus_wait_time") {
+				transport_router_.SetWaitTime(static_cast<size_t>(val.AsInt()));
+			}
+			if (key == "bus_velocity") {
+				transport_router_.SetVelocity(val.AsDouble());
+			}
+		}
 
 	}
 
@@ -368,6 +401,48 @@ namespace transport_catalog {
 			.EndDict();
 
 		return builder.Build().AsDict();
+	}
+
+	json::Dict RequestHandler::OutRoutInfo(const int id, const std::string& stop_from, const std::string& stop_to) {
+		using namespace std::literals;
+		
+		// получим данные по маршруту
+		const std::optional<TransportRouter::RouteInfoResponse> route_info = transport_router_.GetRouteInfo(stop_from, stop_to);
+		
+		if (!route_info) { return json::Dict(); }
+
+		json::Builder json_bilder;
+		json_bilder.StartDict()
+			.Key("request_id"s).Value(id)
+			.Key("total_time"s).Value(route_info->total_time)
+			.Key("items"s)
+				.StartArray();
+					
+		
+		for (const auto& item : route_info->items) {
+			json_bilder.StartDict();
+			
+			if (item.is_waiting) {
+				json_bilder
+					.Key("type"s).Value("Wait"s)
+					.Key("stop_name"s).Value(std::string{ item.name })
+					.Key("time"s).Value(item.weight);
+			}
+			else {
+				json_bilder
+					.Key("type"s).Value("Bus"s)
+					.Key("bus"s).Value(std::string{ item.name })
+					.Key("span_count"s).Value(item.span_count)
+					.Key("time"s).Value(item.weight);
+			}
+			json_bilder.EndDict();
+		}
+
+		json_bilder.EndArray()
+			.EndDict();
+			
+		return json_bilder.Build().AsDict();
+		
 	}
 
 

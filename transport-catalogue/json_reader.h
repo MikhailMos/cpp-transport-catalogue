@@ -13,7 +13,8 @@ namespace transport_catalog {
 	struct Requests {
 		json::Array base_requests; // запросы на добавление в транспортный каталог
 		json::Array stat_requests; // запросы получения информации из транспортного каталога
-		json::Dict render_settings; // настройки карты
+		json::Dict render_settings;  // настройки карты
+		json::Dict routing_settings; // настройки маршрутизации (время ожидания автобуса и скорость автобуса)
 	};
 
 	class JSONReader {

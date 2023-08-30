@@ -12,6 +12,7 @@
 
 #include "domain.h"
 
+
 namespace transport_catalog {
 
     class TransportCatalogue {
@@ -33,8 +34,12 @@ namespace transport_catalog {
         void SetDistanceBetweenStops(Stop* stop1, Stop* stop2, double distance);
         // получить расстояние между остановками
         double GetDistanceBetweenStops(Stop* stop1, Stop* stop2) const;
-        // получает все маршруты хранящиеся в базе
+        // возвращает все маршруты хранящиеся в базе
         const std::unordered_map<std::string_view, Bus*>& GetAllBuses() const;
+        // возвращает все остановки хранящиеся в базе
+        const std::unordered_map<std::string_view, Stop*>& GetAllStops() const;
+        // возвращает количество остановок
+        const size_t GetNumberOfStops() const;
 
     private:
         std::deque<Stop> d_stops_{}; // содержит все остановки

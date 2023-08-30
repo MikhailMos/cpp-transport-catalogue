@@ -102,4 +102,12 @@ namespace transport_catalog {
         return um_busname_to_bus_;
     }
 
-} //transport_catalog
+    const std::unordered_map<std::string_view, Stop*>& TransportCatalogue::GetAllStops() const {
+        return um_stopname_to_stop_;
+    }
+
+    const size_t TransportCatalogue::GetNumberOfStops() const {
+        return d_stops_.size();
+    }
+
+} //namespace transport_catalog

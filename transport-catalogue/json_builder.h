@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 
 #include "json.h"
 
@@ -88,9 +88,9 @@ namespace json {
 	};
 
 	namespace ditails {
-		// проверяет есть ли пустые значения в Dict
+		// РїСЂРѕРІРµСЂСЏРµС‚ РµСЃС‚СЊ Р»Рё РїСѓСЃС‚С‹Рµ Р·РЅР°С‡РµРЅРёСЏ РІ Dict
 		bool HasEmptyValues(const json::Dict& dic);
-		// возвращает ключ у которого пустое значение
+		// РІРѕР·РІСЂР°С‰Р°РµС‚ РєР»СЋС‡ Сѓ РєРѕС‚РѕСЂРѕРіРѕ РїСѓСЃС‚РѕРµ Р·РЅР°С‡РµРЅРёРµ
 		std::pair<bool, std::string> GetKeyWithEmptyValue(const json::Dict& dict);
 	}
 

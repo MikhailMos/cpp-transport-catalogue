@@ -22,7 +22,6 @@ namespace transport_catalog {
 		if (!bus) {
 			return std::nullopt;
 		}
-
 		
 		size_t count = bus->stops.size();
 		if (!bus->is_roundtrip) { count = (count * 2) - 1; }
@@ -48,23 +47,39 @@ namespace transport_catalog {
 		return db_.GetAllBuses();
 	}
 
-	json::Document RequestHandler::ReadAndExecuteRequests(std::istream& input) {
+	void  RequestHandler::MakeBaseRequests(std::istream& input) {
 		JSONReader json_reader;
 		const Requests requests = json_reader.Read(input);
-		
+
 		// запросы на добавление информации в базу
 		if (requests.base_requests.size()) {
 			ToBase(requests.base_requests);
 		}
-
+		
 		// запрос настроек для карты
 		if (requests.render_settings.size()) {
 			SettingsForMap(requests.render_settings);
 		}
-
+		
 		// запрос настроек маршрутизации (время ожидания автобуса и скорость автобуса)
 		if (requests.routing_settings.size()) {
 			SetRoutingSettings(requests.routing_settings);
+		}
+		
+		// запрос настроек сериализации
+		if (requests.serialization_settings.size()) {
+			SetSerialization(requests.serialization_settings);
+		}
+	}
+
+	json::Document RequestHandler::ProcessRequests(std::istream& input) {
+		JSONReader json_reader;
+		const Requests requests = json_reader.Read(input);
+		
+		// запрос настроек сериализации
+		if (requests.serialization_settings.size()) {
+			SetSerialization(requests.serialization_settings);			
+			FillOutFromFile();
 		}
 
 		// запросы к траспортному каталогу
@@ -77,7 +92,7 @@ namespace transport_catalog {
 		}
 
 		return json::Document{ arr_answers };
-	}
+	}	
 
 	void RequestHandler::ToBase(const json::Array& arr_nodes) {
 
@@ -254,6 +269,15 @@ namespace transport_catalog {
 
 	}
 
+	void RequestHandler::SetSerialization(const json::Dict& dict_node) {
+		// распарсим и заполним настройки
+		for (const auto& [key, val] : dict_node) {
+			if (key == "file") {
+				serialization_.SetFileName(val.AsString());
+			}
+		}
+	}
+	
 	size_t RequestHandler::GetUniqueStops(const std::vector<Stop*>& v_stops) const {
 		
 		std::unordered_set<std::string_view> un_set_unique_stops;
@@ -299,6 +323,7 @@ namespace transport_catalog {
 		return result;
 	}
 
+	
 	Stop* RequestHandler::CreateStop(const json::Dict map_stop) {
 		return db_.AddStop(map_stop.at("name").AsString(), map_stop.at("latitude").AsDouble(), map_stop.at("longitude").AsDouble());
 	}
@@ -402,7 +427,7 @@ namespace transport_catalog {
 
 		return builder.Build().AsDict();
 	}
-
+	
 	json::Dict RequestHandler::OutRoutInfo(const int id, const std::string& stop_from, const std::string& stop_to) {
 		using namespace std::literals;
 		
@@ -443,6 +468,16 @@ namespace transport_catalog {
 			
 		return json_bilder.Build().AsDict();
 		
+	}
+
+	void RequestHandler::FillOutFromFile() {
+		
+		std::ifstream infile(serialization_.GetFileName(), std::ios::binary);
+		if (infile.is_open()) {	
+			serialization_.Deserialize(infile, db_, renderer_, transport_router_);
+		}
+
+		infile.close();
 	}
 
 

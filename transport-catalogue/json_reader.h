@@ -15,6 +15,7 @@ namespace transport_catalog {
 		json::Array stat_requests; // запросы получения информации из транспортного каталога
 		json::Dict render_settings;  // настройки карты
 		json::Dict routing_settings; // настройки маршрутизации (время ожидания автобуса и скорость автобуса)
+		json::Dict serialization_settings; // настройки сериализации
 	};
 
 	class JSONReader {

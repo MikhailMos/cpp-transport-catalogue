@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 
 #include "graph.h"
 #include "router.h"
@@ -60,20 +60,20 @@ namespace transport_catalog {
 	private:
 		using CurrentGraph = graph::DirectedWeightedGraph<RouteWeight>;
 
-		double bus_wait_time_ = 0; // время ожидания автобуса в минутах
-		double bus_velocity_ = 0; // скорость автобуса км/ч
+		double bus_wait_time_ = 0; // РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ Р°РІС‚РѕР±СѓСЃР° РІ РјРёРЅСѓС‚Р°С…
+		double bus_velocity_ = 0; // СЃРєРѕСЂРѕСЃС‚СЊ Р°РІС‚РѕР±СѓСЃР° РєРј/С‡
 
-		std::unordered_map<std::string_view, graph::VertexId> um_vertexes_of_stops_; // вершины входа в ожидание по остановкам
+		std::unordered_map<std::string_view, graph::VertexId> um_vertexes_of_stops_; // РІРµСЂС€РёРЅС‹ РІС…РѕРґР° РІ РѕР¶РёРґР°РЅРёРµ РїРѕ РѕСЃС‚Р°РЅРѕРІРєР°Рј
 		std::unique_ptr<CurrentGraph> graph_ptr_;
 		std::unique_ptr<graph::Router<RouteWeight>> router_ptr_;
 
-		// добавляет ребра остановок (ожиданий)
+		// РґРѕР±Р°РІР»СЏРµС‚ СЂРµР±СЂР° РѕСЃС‚Р°РЅРѕРІРѕРє (РѕР¶РёРґР°РЅРёР№)
 		void AddEdgeStops(const std::unordered_map<std::string_view, Stop*> all_stops);
-		// добавляет ребра поездок
+		// РґРѕР±Р°РІР»СЏРµС‚ СЂРµР±СЂР° РїРѕРµР·РґРѕРє
 		void AddEdgeBuses(const TransportCatalogue& tc);
-		// рассчитывает вес
+		// СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚ РІРµСЃ
 		double CalculateWeight(double distance);
-		// устанавливает указатель на роутер
+		// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° СЂРѕСѓС‚РµСЂ
 		void SetRouter();
 	};
 

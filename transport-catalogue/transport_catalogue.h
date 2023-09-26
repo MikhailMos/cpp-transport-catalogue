@@ -40,6 +40,8 @@ namespace transport_catalog {
         const std::unordered_map<std::string_view, Stop*>& GetAllStops() const;
         // возвращает количество остановок
         const size_t GetNumberOfStops() const;
+        // возвращает все хранимые расстояния с остановками
+        const std::unordered_map<std::pair<Stop*, Stop*>, double, StopsPairHasher>& GetAllDistance() const;
 
     private:
         std::deque<Stop> d_stops_{}; // содержит все остановки

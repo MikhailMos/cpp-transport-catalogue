@@ -38,6 +38,10 @@ namespace transport_catalog {
                 else if (key == "routing_settings") {
                     requests.routing_settings = dict_node;
                 }
+                // словарь настроек сериализации
+                else if (key == "serialization_settings") {
+                    requests.serialization_settings = dict_node;
+                }
 
             }
 

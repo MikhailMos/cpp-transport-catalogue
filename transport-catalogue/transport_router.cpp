@@ -1,4 +1,4 @@
-#include "transport_router.h"
+п»ї#include "transport_router.h"
 
 namespace transport_catalog {
 
@@ -28,7 +28,7 @@ namespace transport_catalog {
 	}
 
 	void TransportRouter::BuildGraph(const TransportCatalogue& tc) {
-		const size_t number_edges = tc.GetNumberOfStops() * 2; // т.к. у каждой остановки по две вершины
+		const size_t number_edges = tc.GetNumberOfStops() * 2; // С‚.Рє. Сѓ РєР°Р¶РґРѕР№ РѕСЃС‚Р°РЅРѕРІРєРё РїРѕ РґРІРµ РІРµСЂС€РёРЅС‹
 
 		graph_ptr_ = std::make_unique<CurrentGraph>(number_edges);
 
@@ -62,7 +62,7 @@ namespace transport_catalog {
 		for (const auto& [name_stop, stop] : all_stops) {
 			um_vertexes_of_stops_[name_stop] = vertex;
 			graph_ptr_->AddEdge({ vertex, ++vertex, {name_stop, GetWaitTime(), true, 0} });
-			++vertex; // вершина для следующей остановки
+			++vertex; // РІРµСЂС€РёРЅР° РґР»СЏ СЃР»РµРґСѓСЋС‰РµР№ РѕСЃС‚Р°РЅРѕРІРєРё
 		}
 
 	}
@@ -83,11 +83,11 @@ namespace transport_catalog {
 					});
 
 				}
-				// для новой точки рассчет сначала
+				// РґР»СЏ РЅРѕРІРѕР№ С‚РѕС‡РєРё СЂР°СЃСЃС‡РµС‚ СЃРЅР°С‡Р°Р»Р°
 				sum_distance = 0.;
 			}
 
-			// если не кольцевой маршрут простроим ребра в обратную сторону
+			// РµСЃР»Рё РЅРµ РєРѕР»СЊС†РµРІРѕР№ РјР°СЂС€СЂСѓС‚ РїСЂРѕСЃС‚СЂРѕРёРј СЂРµР±СЂР° РІ РѕР±СЂР°С‚РЅСѓСЋ СЃС‚РѕСЂРѕРЅСѓ
 			if (!bus->is_roundtrip) {
 				for (int i = (count_stops - 1); i > 0 ; --i) {
 
@@ -99,7 +99,7 @@ namespace transport_catalog {
 							});
 
 					}
-					// для новой точки рассчет сначала
+					// РґР»СЏ РЅРѕРІРѕР№ С‚РѕС‡РєРё СЂР°СЃСЃС‡РµС‚ СЃРЅР°С‡Р°Р»Р°
 					sum_distance = 0.;
 				}
 			}

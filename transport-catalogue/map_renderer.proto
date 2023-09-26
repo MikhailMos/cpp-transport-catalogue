@@ -1,0 +1,20 @@
+﻿syntax = "proto3";
+
+import "svg.proto";
+
+package transport_catalog_serialize;
+
+message MapSettings {
+	double width = 1;                   //ширина изображения в пикселях.
+    double height = 2;                  //высота изображения в пикселях.
+    double padding = 3;                 //отступ краёв карты от границ SVG-документа.
+    double line_width = 4;              //толщина линий, которыми рисуются автобусные маршруты.
+    double stop_radius = 5;             //радиус окружностей, которыми обозначаются остановки.
+    uint32 bus_label_font_size = 6;     //размер текста, которым написаны названия автобусных маршрутов.
+    Point bus_label_offset = 7;         //смещение надписи с названием маршрута относительно координат конечной остановки на карте.
+    uint32 stop_label_font_size = 8;    //размер текста, которым отображаются названия остановок.
+    Point stop_label_offset = 9;        //смещение названия остановки относительно её координат на карте.
+    Color underlayer_color = 10;        //цвет подложки под названиями остановок и маршрутов.
+    double underlayer_width = 11;       //толщина подложки под названиями остановок и маршрутов
+    repeated Color color_palette = 12;  //цветовая палитра.
+}

@@ -1,4 +1,4 @@
-#include "json_builder.h"
+п»ї#include "json_builder.h"
 
 namespace json {
 
@@ -59,7 +59,7 @@ namespace json {
             if (!last_node_ptr->IsDict()) {
                 throw std::logic_error("EndDict: no pending calls StartDict"s);
             }
-            // удалим завершенный узел
+            // СѓРґР°Р»РёРј Р·Р°РІРµСЂС€РµРЅРЅС‹Р№ СѓР·РµР»
             nodes_stack_.pop_back();
         }
 
@@ -122,7 +122,7 @@ namespace json {
             if (!last_node_ptr->IsArray()) {
                 throw std::logic_error("EndArray: no pending calls StartArray"s);
             }
-            // удалим завершенный узел
+            // СѓРґР°Р»РёРј Р·Р°РІРµСЂС€РµРЅРЅС‹Р№ СѓР·РµР»
             nodes_stack_.pop_back();
         }
 
@@ -139,7 +139,7 @@ namespace json {
 
         json::Dict& dic = std::get<json::Dict>(nodes_stack_.back()->GetValue());
 
-        // проверим есть ли ключи с пустым значением
+        // РїСЂРѕРІРµСЂРёРј РµСЃС‚СЊ Р»Рё РєР»СЋС‡Рё СЃ РїСѓСЃС‚С‹Рј Р·РЅР°С‡РµРЅРёРµРј
         if (ditails::HasEmptyValues(dic)) {
             throw std::logic_error("Key: called some times method Key");
         }

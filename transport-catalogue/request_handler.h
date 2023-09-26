@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string_view>
 #include <algorithm>
+#include <fstream>
 
 #include "domain.h"
 #include "transport_catalogue.h"
@@ -13,6 +14,7 @@
 #include "json_reader.h"
 #include "json_builder.h"
 #include "transport_router.h"
+#include "serialization.h"
 
 
 namespace transport_catalog {
@@ -20,7 +22,7 @@ namespace transport_catalog {
     struct BusStat {
         BusStat(std::string_view sv_name, double geo_length, double length, size_t count, size_t unique_count);
 
-        std::string_view& name;
+        std::string_view name;
         double geo_route_length;
         double route_length;        
         std::uint16_t stop_count, unique_stop_count;
@@ -30,10 +32,11 @@ namespace transport_catalog {
     class RequestHandler {
     public:
         RequestHandler() = default;
-        RequestHandler(TransportCatalogue& db, renderer::MapRenderer& renderer, TransportRouter& transport_router)
+        RequestHandler(TransportCatalogue& db, renderer::MapRenderer& renderer, TransportRouter& transport_router, Serialization& serializtion)
             : db_(db)
             , renderer_(renderer)
             , transport_router_(transport_router)
+            , serialization_(serializtion)
         {}
         
         // Возвращает информацию о маршруте (запрос Bus)
@@ -43,8 +46,10 @@ namespace transport_catalog {
         // получает все маршруты хранящиеся в базе
         const std::unordered_map<std::string_view, Bus*>& GetAllBuses() const;
 
+        // заполняет транспортный каталог данными и устанавливает настройки
+        void MakeBaseRequests(std::istream& input);
         // возвращает ответы на запросы к транспортному каталогу
-        json::Document ReadAndExecuteRequests(std::istream& input);
+        json::Document ProcessRequests(std::istream& input);
         // обрабатывает запросы добавления в транспортный справочник
         void ToBase(const json::Array& arr_nodes);
         // обрабатывает запросы к транспортному справочнику и выводит готовый результат
@@ -53,12 +58,15 @@ namespace transport_catalog {
         void SettingsForMap(const json::Dict& dict_node);
         // обрабатыает настройки маршрутизации
         void SetRoutingSettings(const json::Dict& dict_node);
+        // обрабатыает настройки сериализации
+        void SetSerialization(const json::Dict& dict_node);
 
     private:
         // RequestHandler использует агрегацию объектов "Транспортный Справочник", "Визуализатор Карты", "Маршрутизация транспорта"
         TransportCatalogue& db_;
         renderer::MapRenderer& renderer_;
         TransportRouter& transport_router_;
+        Serialization& serialization_;
 
         // возвращает кол-во уникальных остановок
         size_t GetUniqueStops(const std::vector<Stop*>& v_stops) const;
@@ -78,6 +86,9 @@ namespace transport_catalog {
         json::Dict OutStopInfo(const int id, const std::optional<std::set<std::string_view>*>& stop_info);
         json::Dict OutMap(const int id);
         json::Dict OutRoutInfo(const int id, const std::string& stop_from, const std::string& stop_to);
+
+        // заполняет данные из файла
+        void FillOutFromFile();
     };
 
 

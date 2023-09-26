@@ -1,4 +1,4 @@
-#include "transport_catalogue.h"
+п»ї#include "transport_catalogue.h"
 
 #include <utility>
 #include <unordered_set>
@@ -11,7 +11,7 @@ namespace transport_catalog {
         Stop stop{ name, std::move(coord) };
         auto& el = d_stops_.emplace_back(std::move(stop));
         um_stopname_to_stop_.emplace(el.name, &el);
-        // добавляем. если только такой остановки нет
+        // РґРѕР±Р°РІР»СЏРµРј. РµСЃР»Рё С‚РѕР»СЊРєРѕ С‚Р°РєРѕР№ РѕСЃС‚Р°РЅРѕРІРєРё РЅРµС‚
         if (um_stops_info_.count(el.name) == 0) {
             um_stops_info_.emplace(el.name, std::set<std::string_view>());
         }
@@ -42,7 +42,7 @@ namespace transport_catalog {
         auto& el = d_buses_.emplace_back(std::move(bus));
         um_busname_to_bus_.emplace(el.name, &el);
 
-        // добавим в остановки автобусы
+        // РґРѕР±Р°РІРёРј РІ РѕСЃС‚Р°РЅРѕРІРєРё Р°РІС‚РѕР±СѓСЃС‹
         for (const auto& stop : el.stops) {
             um_stops_info_.at(stop->name).insert(el.name);
         }
@@ -108,6 +108,11 @@ namespace transport_catalog {
 
     const size_t TransportCatalogue::GetNumberOfStops() const {
         return d_stops_.size();
+    }
+
+    const std::unordered_map<std::pair<Stop*, Stop*>, double, StopsPairHasher>& TransportCatalogue::GetAllDistance() const
+    {
+        return um_distance_;
     }
 
 } //namespace transport_catalog
